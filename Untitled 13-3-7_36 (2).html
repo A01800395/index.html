@@ -1,0 +1,415 @@
+<html lang="en"><head>
+<meta charset="UTF-8">
+
+<style id="webmakerstyle">
+
+</style>
+</head>
+<body class="bg-stone-50 text-stone-800 font-sans antialiased min-h-screen flex flex-col">
+
+
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business &amp; Technology Dictionary</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Warm Neutrals with Semantic Accents (Emerald, Amber, Indigo, Rose) -->
+    <!-- Application Structure Plan: The SPA is structured as a dual-mode interactive glossary (Grid & Flashcard modes). A top dashboard provides an overview of term distribution via a donut chart, and includes search/filter controls. The grid offers rapid scanning, while the flashcard view facilitates active recall and deeper study. This serves the goal of easy exploration and active learning. -->
+    <!-- Visualization & Content Choices: Content: Dictionary terms. Goal: Inform & Organize. Viz: Donut Chart for categorical distribution (Chart.js), CSS Grid for scanning, 3D CSS transform cards for studying. Interaction: Click chart to filter, search text, toggle view modes, click to flip cards. Justification: Dictionaries are reference tools; adding study modes and high-level categorization makes synthesis faster. Library: Chart.js for data visualization, pure CSS/JS for layout and interaction. NO SVG/Mermaid used. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+       .chart-container { 
+           position: relative; 
+           width: 100%; 
+           max-width: 350px; 
+           margin-left: auto; 
+           margin-right: auto; 
+           height: 250px; 
+           max-height: 300px; 
+       }
+       .perspective { perspective: 1000px; }
+       .preserve-3d { 
+           transform-style: preserve-3d; 
+           transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1); 
+       }
+       .backface-hidden { backface-visibility: hidden; }
+       .rotate-y-180 { transform: rotateY(180deg); }
+       .flip-card-inner.flipped { transform: rotateY(180deg); }
+       
+       ::-webkit-scrollbar {
+           width: 6px;
+       }
+       ::-webkit-scrollbar-track {
+           background: transparent;
+       }
+       ::-webkit-scrollbar-thumb {
+           background-color: #cbd5e1;
+           border-radius: 20px;
+       }
+    </style>
+
+
+
+<header class="bg-white shadow-sm sticky top-0 z-50 border-b border-stone-200">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <h1 class="text-2xl font-bold text-indigo-900 flex items-center gap-2">
+            <span>📘</span> Dictionary Update - Partial 2
+
+        </h1>
+        <div class="flex space-x-2 bg-stone-100 p-1 rounded-lg">
+            <button id="btn-grid" class="px-4 py-1.5 bg-white text-indigo-700 shadow-sm rounded-md font-medium text-sm transition-all">Grid View</button>
+            <button id="btn-flash" class="px-4 py-1.5 text-stone-600 hover:text-stone-900 rounded-md font-medium text-sm transition-all">Flashcards</button>
+        </div>
+    </div>
+</header>
+
+<main class="flex-grow max-w-7xl mx-auto px-6 py-8 w-full">
+    
+    <section class="mb-10 grid grid-cols-1 lg:grid-cols-3 gap-8 items-center bg-white p-8 rounded-2xl shadow-sm border border-stone-100">
+        <div class="lg:col-span-2">
+            <h2 class="text-3xl font-bold mb-3 text-stone-900">Master the Terminology</h2>
+            <p class="text-stone-600 mb-8 leading-relaxed text-lg max-w-3xl">
+                Explore key concepts across business operations, information technology, and strategic innovation. Use the dashboard to filter categories, search for specific terms, or switch to flashcard mode to test your knowledge.
+            </p>
+            <div class="flex flex-col space-y-5">
+                <div class="relative max-w-2xl">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-stone-400">🔍</span>
+                    <input type="text" id="searchInput" placeholder="Search for a term or keyword..." class="w-full pl-11 pr-4 py-3 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-sm">
+                </div>
+                <div class="flex flex-wrap gap-2" id="filter-container">
+                </div>
+            </div>
+        </div>
+        <div class="flex flex-col items-center justify-center bg-stone-50 rounded-xl p-6 border border-stone-100 h-full">
+            <h3 class="text-xs font-bold text-stone-500 uppercase tracking-widest mb-4 text-center">Term Distribution<br><span class="text-stone-400 font-normal normal-case">(Click chart to filter)</span></h3>
+            <div class="chart-container w-full">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+    </section>
+    
+    <section id="grid-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    </section>
+
+    <section id="flashcard-view" class="hidden flex flex-col items-center justify-center py-8 min-h-[50vh]">
+        <div class="mb-6 px-4 py-1.5 bg-stone-200 text-stone-700 font-bold text-sm rounded-full tracking-wide" id="flashcard-counter"></div>
+        
+        <div class="perspective w-full max-w-2xl h-96 cursor-pointer" id="flashcard-container">
+            <div class="preserve-3d w-full h-full relative flip-card-inner shadow-xl hover:shadow-2xl transition-shadow rounded-3xl" id="flashcard-inner">
+                
+                <div class="backface-hidden absolute w-full h-full bg-white rounded-3xl p-10 flex flex-col items-center justify-center border border-stone-100 text-center">
+                    <span id="flashcard-category" class="px-4 py-1 text-xs font-bold uppercase tracking-wider rounded-full mb-6"></span>
+                    <h3 id="flashcard-term" class="text-4xl font-extrabold text-stone-800 leading-tight"></h3>
+                    <div class="absolute bottom-8 flex items-center gap-2 text-indigo-400 text-sm font-medium bg-indigo-50 px-4 py-2 rounded-full">
+                        <span>Click to reveal definition</span>
+                        <span class="text-lg">🔄</span>
+                    </div>
+                </div>
+                
+                <div class="backface-hidden rotate-y-180 absolute w-full h-full bg-indigo-600 rounded-3xl p-10 flex flex-col items-center justify-center border border-indigo-700 text-center text-white overflow-hidden shadow-inner">
+                    <div class="overflow-y-auto max-h-full w-full px-4">
+                        <p id="flashcard-def" class="text-xl leading-relaxed font-medium"></p>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-6 mt-10">
+            <button id="btn-prev" class="flex items-center gap-2 px-6 py-3 bg-white border border-stone-200 rounded-xl shadow-sm hover:bg-stone-50 hover:border-stone-300 text-stone-700 font-bold transition-all focus:ring-2 focus:ring-stone-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed">
+                <span>⬅️</span> Previous
+            </button>
+            <button id="btn-next" class="flex items-center gap-2 px-6 py-3 bg-indigo-600 border border-indigo-700 rounded-xl shadow-sm hover:bg-indigo-700 text-white font-bold transition-all focus:ring-2 focus:ring-indigo-300 outline-none disabled:opacity-50 disabled:cursor-not-allowed">
+                Next <span>➡️</span>
+            </button>
+        </div>
+    </section>
+</main>
+
+<script>
+const dictData = [
+    { term: "Crisis Management", def: "The process by which an organization deals with a disruptive and unexpected event that threatens to harm the organization or its stakeholders.", category: "Risk & Innovation Strategy" },
+    { term: "Contingency Plan", def: "Often called 'Plan B,' this is a course of action designed to help an organization respond effectively to a significant future event or situation that may or may not happen.", category: "Risk & Innovation Strategy" },
+    { term: "Research and Development (R&D)", def: "Innovative activities undertaken by corporations or governments in developing new services or products, or improving existing ones.", category: "Risk & Innovation Strategy" },
+    { term: "Incremental Innovation", def: "A series of small improvements or upgrades made to a company's existing products, services, or processes to maintain competitive position over time.", category: "Risk & Innovation Strategy" },
+    { term: "Disruptive Innovation", def: "An innovation that creates a new market and value network, eventually displacing established market-leading firms, products, and alliances.", category: "Risk & Innovation Strategy" },
+    { term: "Copyright", def: "Legal protection for 'original works of authorship,' including literary, dramatic, musical, and artistic works. It prevents unauthorized copying or distribution.", category: "Intellectual Property (IP)" },
+    { term: "Patent", def: "A sovereign right granted by a government to an inventor, giving them the exclusive right to exclude others from making, using, or selling an invention for a limited period.", category: "Intellectual Property (IP)" },
+    { term: "Trademark", def: "A recognizable sign, design, or expression which identifies products or services of a particular source from those of others (e.g., logos or brand names).", category: "Intellectual Property (IP)" },
+    { term: "Management Information Systems (MIS)", def: "The study of people, technology, and organizations, focusing on the use of information technology to solve business problems.", category: "Data, Infrastructure & AI" },
+    { term: "Data Analytics", def: "The science of analyzing raw data in order to make conclusions about that information, often used to optimize business processes.", category: "Data, Infrastructure & AI" },
+    { term: "Databases", def: "Organized collections of structured information, or data, typically stored electronically in a computer system.", category: "Data, Infrastructure & AI" },
+    { term: "Data Mining", def: "The process of discovering patterns and knowledge from large amounts of data using software.", category: "Data, Infrastructure & AI" },
+    { term: "Artificial Intelligence (AI)", def: "The simulation of human intelligence processes by machines, especially computer systems, including learning, reasoning, and self-correction.", category: "Data, Infrastructure & AI" },
+    { term: "Artificial Neural Networks", def: "A subset of AI inspired by the human brain's structure, consisting of interconnected nodes that 'learn' to perform tasks by considering examples.", category: "Data, Infrastructure & AI" },
+    { term: "Big Data", def: "Extremely large data sets that may be analyzed computationally to reveal patterns, trends, and associations, especially relating to human behavior.", category: "Data, Infrastructure & AI" },
+    { term: "Cybersecurity", def: "The practice of protecting systems, networks, and programs from digital attacks.", category: "Data, Infrastructure & AI" },
+    { term: "Cybercrime", def: "Criminal activities carried out by means of computers or the internet.", category: "Data, Infrastructure & AI" },
+    { term: "Data Centres", def: "Physical facilities that organizations use to house their critical applications and data.", category: "Data, Infrastructure & AI" },
+    { term: "Cloud Computing", def: "The on-demand delivery of IT resources (like servers and storage) over the internet with pay-as-you-go pricing.", category: "Data, Infrastructure & AI" },
+    { term: "Internet of Things (IoT)", def: "The network of physical objects ('things') embedded with sensors and software for the purpose of connecting and exchanging data with other devices over the internet.", category: "Data, Infrastructure & AI" },
+    { term: "Virtual Reality (VR)", def: "A simulated experience that can be similar to or completely different from the real world, typically involving a headset.", category: "Data, Infrastructure & AI" },
+    { term: "Digital Taylorism", def: "The use of technology (such as monitoring software) to apply 'scientific management' principles, breaking work down into small, measurable, and highly controlled tasks.", category: "Operations & Supply Chain" },
+    { term: "Just-in-Time (JIT)", def: "An inventory management method where goods are received from suppliers only as they are needed in the production process, reducing inventory costs.", category: "Operations & Supply Chain" },
+    { term: "Just-in-Case (JIC)", def: "An inventory strategy where companies keep large inventories on hand to minimize the risk of running out of stock.", category: "Operations & Supply Chain" },
+    { term: "Customer Loyalty Programmes", def: "Structured marketing strategies designed to encourage customers to continue to shop at or use the services of a business (e.g., points cards).", category: "Operations & Supply Chain" },
+    { term: "Stock Control Chart", def: "A visual tool used to monitor inventory levels over time, showing maximum stock, minimum stock, and the reorder point.", category: "Operations & Supply Chain" },
+    { term: "Lead Time", def: "The amount of time that elapses between when a process starts (e.g., placing an order) and when it is completed (e.g., receiving the goods).", category: "Operations & Supply Chain" },
+    { term: "Buffer Stock", def: "Also known as 'safety stock,' this is extra inventory held to guard against uncertainty in demand or supply.", category: "Operations & Supply Chain" },
+    { term: "Reorder Level", def: "The specific inventory level at which a new stock order should be placed.", category: "Operations & Supply Chain" },
+    { term: "Reorder Quantity", def: "The fixed amount of stock ordered every time the reorder level is reached.", category: "Operations & Supply Chain" },
+    { term: "Cost to Buy (CTB)", def: "The total cost incurred when purchasing a product or service from an external supplier.", category: "Operations & Supply Chain" },
+    { term: "Cost to Make (CTM)", def: "The total cost incurred when an organization produces a product or service internally.", category: "Operations & Supply Chain" }
+];
+
+const colors = {
+    "Risk & Innovation Strategy": "#10b981", 
+    "Intellectual Property (IP)": "#f59e0b", 
+    "Data, Infrastructure & AI": "#6366f1",  
+    "Operations & Supply Chain": "#f43f5e"   
+};
+
+const bgColors = {
+    "Risk & Innovation Strategy": "bg-emerald-100 text-emerald-800 border-emerald-200",
+    "Intellectual Property (IP)": "bg-amber-100 text-amber-800 border-amber-200",
+    "Data, Infrastructure & AI": "bg-indigo-100 text-indigo-800 border-indigo-200",
+    "Operations & Supply Chain": "bg-rose-100 text-rose-800 border-rose-200"
+};
+
+const iconMap = {
+    "Risk & Innovation Strategy": "🛡️",
+    "Intellectual Property (IP)": "⚖️",
+    "Data, Infrastructure & AI": "💻",
+    "Operations & Supply Chain": "⚙️"
+};
+
+let currentFilter = "All";
+let searchQuery = "";
+let currentView = "grid";
+let flashcardIndex = 0;
+let filteredData = [...dictData];
+let chartInstance = null;
+
+const searchInput = document.getElementById('searchInput');
+const filterContainer = document.getElementById('filter-container');
+const gridView = document.getElementById('grid-view');
+const flashcardView = document.getElementById('flashcard-view');
+const btnGrid = document.getElementById('btn-grid');
+const btnFlash = document.getElementById('btn-flash');
+const flashcardInner = document.getElementById('flashcard-inner');
+const flashcardContainer = document.getElementById('flashcard-container');
+const btnPrev = document.getElementById('btn-prev');
+const btnNext = document.getElementById('btn-next');
+
+function init() {
+    renderFilters();
+    initChart();
+    applyFilters();
+    setupEventListeners();
+}
+
+function setupEventListeners() {
+    searchInput.addEventListener('input', (e) => {
+        searchQuery = e.target.value.toLowerCase();
+        applyFilters();
+    });
+    
+    btnGrid.addEventListener('click', () => switchView('grid'));
+    btnFlash.addEventListener('click', () => switchView('flashcard'));
+    
+    flashcardContainer.addEventListener('click', () => {
+        if(filteredData.length > 0) {
+            flashcardInner.classList.toggle('flipped');
+        }
+    });
+    
+    btnPrev.addEventListener('click', () => {
+        if(flashcardIndex > 0) {
+            flashcardInner.classList.remove('flipped');
+            setTimeout(() => {
+                flashcardIndex--;
+                renderFlashcard();
+            }, 200);
+        }
+    });
+    
+    btnNext.addEventListener('click', () => {
+        if(flashcardIndex < filteredData.length - 1) {
+            flashcardInner.classList.remove('flipped');
+            setTimeout(() => {
+                flashcardIndex++;
+                renderFlashcard();
+            }, 200);
+        }
+    });
+}
+
+function renderFilters() {
+    const categories = ["All", ...Object.keys(colors)];
+    filterContainer.innerHTML = '';
+    
+    categories.forEach(cat => {
+        const btn = document.createElement('button');
+        const icon = cat === "All" ? "📚" : iconMap[cat];
+        btn.innerHTML = `<span>${icon}</span> ${cat}`;
+        
+        if (currentFilter === cat) {
+            btn.className = `px-4 py-2 rounded-lg text-sm font-bold shadow-md transform scale-105 transition-all bg-stone-800 text-white flex items-center gap-2 border border-stone-800`;
+        } else {
+            btn.className = `px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-stone-600 hover:bg-stone-100 border border-stone-200 flex items-center gap-2 hover:shadow-sm`;
+        }
+        
+        btn.addEventListener('click', () => {
+            currentFilter = cat;
+            renderFilters();
+            applyFilters();
+        });
+        filterContainer.appendChild(btn);
+    });
+}
+
+function applyFilters() {
+    filteredData = dictData.filter(item => {
+        const matchesSearch = item.term.toLowerCase().includes(searchQuery) || item.def.toLowerCase().includes(searchQuery);
+        const matchesCategory = currentFilter === "All" || item.category === currentFilter;
+        return matchesSearch && matchesCategory;
+    });
+    
+    flashcardIndex = 0;
+    if(flashcardInner) flashcardInner.classList.remove('flipped');
+    
+    if (currentView === 'grid') {
+        renderGrid();
+    } else {
+        renderFlashcard();
+    }
+}
+
+function renderGrid() {
+    gridView.innerHTML = '';
+    if(filteredData.length === 0) {
+        gridView.innerHTML = '<div class="col-span-full flex flex-col items-center justify-center py-20 text-stone-400 bg-white rounded-xl border border-dashed border-stone-300"><span class="text-4xl mb-4">📭</span><p class="text-lg">No terms found matching your criteria.</p></div>';
+        return;
+    }
+    
+    filteredData.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'bg-white p-6 rounded-2xl shadow-sm border border-stone-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col h-full relative overflow-hidden group';
+        
+        card.innerHTML = `
+            <div class="absolute top-0 left-0 w-full h-1" style="background-color: ${colors[item.category]}"></div>
+            <div class="mb-4 flex items-center justify-between">
+                <span class="px-3 py-1 text-xs font-bold rounded-full border ${bgColors[item.category]} flex items-center gap-1">
+                    ${iconMap[item.category]} ${item.category}
+                </span>
+            </div>
+            <h3 class="text-xl font-bold text-stone-900 mb-3 group-hover:text-indigo-600 transition-colors">${item.term}</h3>
+            <p class="text-stone-600 text-sm flex-grow leading-relaxed">${item.def}</p>
+        `;
+        gridView.appendChild(card);
+    });
+}
+
+function renderFlashcard() {
+    if(filteredData.length === 0) {
+        document.getElementById('flashcard-counter').textContent = '0 / 0';
+        document.getElementById('flashcard-term').textContent = 'No Terms Found';
+        document.getElementById('flashcard-def').textContent = 'Try clearing your search or filters to see available terms.';
+        document.getElementById('flashcard-category').className = 'hidden';
+        btnPrev.disabled = true;
+        btnNext.disabled = true;
+        return;
+    }
+    
+    const item = filteredData[flashcardIndex];
+    document.getElementById('flashcard-counter').textContent = `Card ${flashcardIndex + 1} of ${filteredData.length}`;
+    document.getElementById('flashcard-term').textContent = item.term;
+    document.getElementById('flashcard-def').textContent = item.def;
+    
+    const catBadge = document.getElementById('flashcard-category');
+    catBadge.innerHTML = `${iconMap[item.category]} ${item.category}`;
+    catBadge.className = `px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-full mb-6 border ${bgColors[item.category]}`;
+    
+    btnPrev.disabled = flashcardIndex === 0;
+    btnNext.disabled = flashcardIndex === filteredData.length - 1;
+}
+
+function switchView(view) {
+    currentView = view;
+    if (view === 'grid') {
+        gridView.classList.remove('hidden');
+        flashcardView.classList.add('hidden');
+        
+        btnGrid.className = 'px-4 py-1.5 bg-white text-indigo-700 shadow-sm rounded-md font-medium text-sm transition-all';
+        btnFlash.className = 'px-4 py-1.5 text-stone-600 hover:text-stone-900 rounded-md font-medium text-sm transition-all';
+        renderGrid();
+    } else {
+        gridView.classList.add('hidden');
+        flashcardView.classList.remove('hidden');
+        flashcardInner.classList.remove('flipped');
+        
+        btnFlash.className = 'px-4 py-1.5 bg-white text-indigo-700 shadow-sm rounded-md font-medium text-sm transition-all';
+        btnGrid.className = 'px-4 py-1.5 text-stone-600 hover:text-stone-900 rounded-md font-medium text-sm transition-all';
+        renderFlashcard();
+    }
+}
+
+function initChart() {
+    const ctx = document.getElementById('categoryChart').getContext('2d');
+    const categories = Object.keys(colors);
+    const counts = categories.map(cat => dictData.filter(d => d.category === cat).length);
+    const bg = categories.map(cat => colors[cat]);
+    
+    chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: categories,
+            datasets: [{
+                data: counts,
+                backgroundColor: bg,
+                borderWidth: 3,
+                borderColor: '#ffffff',
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(28, 25, 23, 0.9)',
+                    titleFont: { size: 13, family: "'Inter', sans-serif" },
+                    bodyFont: { size: 14, weight: 'bold', family: "'Inter', sans-serif" },
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    callbacks: {
+                        label: function(context) {
+                            return ` ${context.raw} Terms`;
+                        }
+                    }
+                }
+            },
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const idx = elements[0].index;
+                    currentFilter = categories[idx];
+                    renderFilters();
+                    applyFilters();
+                }
+            }
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+
+
+
+
+</body></html>
